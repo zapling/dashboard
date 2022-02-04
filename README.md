@@ -1,1 +1,3 @@
 # 🔆 dashboard
+
+![dashboard](./dashboard.png)
