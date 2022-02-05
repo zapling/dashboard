@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/common-nighthawk/go-figure"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/zapling/dashboard/asciiart"
 )
 
 const (
@@ -21,15 +21,13 @@ const (
 var app = tview.NewApplication()
 
 func main() {
-	box := tview.NewBox().SetBorder(false).SetTitle("Hello, world!")
-	box.SetBackgroundColor(tcell.NewHexColor(BACKGROUND_COLOR))
-
 	clockBox := tview.NewTextView()
 	clockBox.SetBackgroundColor(tcell.NewHexColor(BACKGROUND_COLOR))
+	clockBox.SetTextAlign(tview.AlignCenter)
 
 	statusBox := tview.NewTextView()
 	statusBox.SetTextAlign(tview.AlignCenter)
-	statusBox.SetBackgroundColor(tcell.NewHexColor(BACKGROUND_COLOR))
+	// statusBox.SetBackgroundColor(tcell.NewHexColor(BACKGROUND_COLOR))
 
 	weather := getWeather()
 	if len(weather) > 0 {
@@ -39,12 +37,12 @@ func main() {
 	fmt.Fprint(statusBox, fmt.Sprintf(" %d ", numGithubNotifications()))
 	fmt.Fprint(statusBox, fmt.Sprintf(" %d", numGitlabNotifications()))
 
-	height := 9
+	height := 7
 	width := 60
 
 	layout := tview.NewFlex().
 		SetDirection(tview.FlexColumn).
-		AddItem(box, 0, 1, false).
+		AddItem(nil, 0, 1, false).
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(nil, 0, 1, false).
 			AddItem(clockBox, height, 1, true).
@@ -71,21 +69,9 @@ func getWeather() string {
 func printClock(app *tview.Application, primitive *tview.TextView) {
 	for true {
 		now := time.Now()
-		displayTime := now.Format("15:04:05")
 		date := now.Format("Mon Jan 2 2006")
 
-		// ascii time
-		myFigure := figure.NewFigure(displayTime, "big", true)
-		str := myFigure.String() + "\n"
-
-		spacesToAdd := 30 - len(date)/2
-
-		for i := 0; i < spacesToAdd; i++ {
-			str = str + " "
-		}
-
-		// append date
-		str = str + date
+		str := asciiart.GetTime(now) + "\n\n" + date
 
 		fmt.Fprint(primitive, str)
 		app.Draw()
