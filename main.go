@@ -1,10 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"net/http"
-	"os"
-
 	"github.com/zapling/dashboard/ui"
 )
 
