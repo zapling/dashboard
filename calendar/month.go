@@ -1,13 +1,12 @@
 package calendar
 
 import (
-	"fmt"
 	"time"
 )
 
-// GetMonth returns dates for 5 full weaks
-func GetMonth(t time.Time) string {
-	var str string
+// GetMonth returns dates for 5 full weeks
+func GetMonth(t time.Time) []time.Time {
+	var month []time.Time
 
 	firstDay := date(t.Year(), int(t.Month()), 1)
 
@@ -21,18 +20,17 @@ func GetMonth(t time.Time) string {
 
 		day := date(firstDay.Year(), int(firstDay.Month()), 1+offset)
 
-		str = fmt.Sprintf("%s %d ", str, day.Day())
+		month = append(month, day)
 
 		// if we added a sunday we are done with the current week
 		if day.Weekday() == time.Sunday {
-			str = str + "\n"
 			week++
 		}
 
 		offset++
 	}
 
-	return str
+	return month
 }
 
 func date(year, month, day int) time.Time {
