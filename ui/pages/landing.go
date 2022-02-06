@@ -7,10 +7,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/zapling/dashboard/asciiart"
 	"github.com/zapling/dashboard/state"
 )
+
+const PAGE_LANDING = "landing_page"
 
 func NewLandingPage(state *state.UIState) tview.Primitive {
 	var clockHeight = 8
@@ -26,14 +29,24 @@ func NewLandingPage(state *state.UIState) tview.Primitive {
 	menuTextView.SetTextAlign(tview.AlignCenter)
 	printMenuText(menuTextView)
 
+	menuTextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 'c' {
+			state.Pages.HidePage(PAGE_LANDING)
+			state.Pages.SwitchToPage(PAGE_CALENDAR)
+			return event
+		}
+
+		return event
+	})
+
 	pageRows := tview.NewFlex().SetDirection(tview.FlexRow)
 	pageRows.AddItem(emptyTextView, 0, 1, false)
-	pageRows.AddItem(clockTextView, clockHeight, 1, true)
-	pageRows.AddItem(menuTextView, 0, 1, false)
+	pageRows.AddItem(clockTextView, clockHeight, 1, false)
+	pageRows.AddItem(menuTextView, 0, 1, true)
 
 	page := tview.NewFlex().SetDirection(tview.FlexColumn)
 	page.AddItem(emptyTextView, 0, 1, false)
-	page.AddItem(pageRows, pageWidth, 1, false)
+	page.AddItem(pageRows, pageWidth, 1, true)
 	page.AddItem(emptyTextView, 0, 1, false)
 
 	return page
@@ -44,6 +57,7 @@ func printMenuText(tv *tview.TextView) {
 	gitlabNotifications := getNumGitlabNotifications()
 
 	fmt.Fprint(tv, fmt.Sprintf(" %d  %d\n ", githubNotifications, gitlabNotifications))
+	fmt.Fprint(tv, "\n  Calendar        c\n\n")
 }
 
 func updateClock(tv *tview.TextView, app *tview.Application) {

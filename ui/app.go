@@ -10,6 +10,10 @@ func Start() error {
 	state := state.NewUIState()
 
 	landing := pages.NewLandingPage(state)
+	state.Pages.AddPage(pages.PAGE_LANDING, landing, true, true)
 
-	return state.App.SetRoot(landing, true).Run()
+	calendar := pages.NewCalendarPage(state)
+	state.Pages.AddPage(pages.PAGE_CALENDAR, calendar, true, false)
+
+	return state.App.SetRoot(state.Pages, true).Run()
 }
