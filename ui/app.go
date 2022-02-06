@@ -7,13 +7,15 @@ import (
 
 // Start setups the interface and renders the application
 func Start() error {
-	state := state.NewUIState()
+	uiState := state.NewUIState()
 
-	landing := pages.NewLandingPage(state)
-	state.Pages.AddPage(pages.PAGE_LANDING, landing, true, true)
+	state.GlobalUIState = uiState
 
-	calendar := pages.NewCalendarPage(state)
-	state.Pages.AddPage(pages.PAGE_CALENDAR, calendar, true, false)
+	landing := pages.NewLandingPage(uiState)
+	uiState.Pages.AddPage(pages.PAGE_LANDING, landing, true, true)
 
-	return state.App.SetRoot(state.Pages, true).Run()
+	calendar := pages.NewCalendarPage(uiState)
+	uiState.Pages.AddPage(pages.PAGE_CALENDAR, calendar, true, false)
+
+	return uiState.App.SetRoot(uiState.Pages, true).Run()
 }
