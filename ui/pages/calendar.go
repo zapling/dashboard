@@ -2,20 +2,24 @@ package pages
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/zapling/dashboard/calendar"
 	"github.com/zapling/dashboard/state"
 )
 
 const PAGE_CALENDAR = "calendar_page"
 
 func NewCalendarPage(state *state.UIState) tview.Primitive {
-	calendarTextView := tview.NewTextView()
+	now := time.Now()
 
-	fmt.Fprint(calendarTextView, "Calendar page, ESC to go back")
+	monthView := calendar.NewMonthView(now.Year(), int(now.Month()))
 
-	calendarTextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	fmt.Fprint(monthView, "Calendar page, ESC to go back")
+
+	monthView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyESC {
 			state.Pages.HidePage(PAGE_CALENDAR)
 			state.Pages.SwitchToPage(PAGE_LANDING)
@@ -25,5 +29,5 @@ func NewCalendarPage(state *state.UIState) tview.Primitive {
 		return event
 	})
 
-	return calendarTextView
+	return monthView
 }
