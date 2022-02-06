@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"github.com/zapling/dashboard/asciiart"
+	"github.com/zapling/dashboard/clock"
 	"github.com/zapling/dashboard/state"
 )
 
@@ -20,10 +19,7 @@ func NewLandingPage(state *state.UIState) tview.Primitive {
 	var pageWidth = 60
 
 	emptyTextView := tview.NewTextView()
-
-	clockTextView := tview.NewTextView()
-	clockTextView.SetTextAlign(tview.AlignCenter)
-	go updateClock(clockTextView, state.App)
+	clockView := clock.NewClockView(state.App)
 
 	menuTextView := tview.NewTextView()
 	menuTextView.SetTextAlign(tview.AlignCenter)
@@ -41,7 +37,7 @@ func NewLandingPage(state *state.UIState) tview.Primitive {
 
 	pageRows := tview.NewFlex().SetDirection(tview.FlexRow)
 	pageRows.AddItem(emptyTextView, 0, 1, false)
-	pageRows.AddItem(clockTextView, clockHeight, 1, false)
+	pageRows.AddItem(clockView, clockHeight, 1, false)
 	pageRows.AddItem(menuTextView, 0, 1, true)
 
 	page := tview.NewFlex().SetDirection(tview.FlexColumn)
@@ -58,21 +54,6 @@ func printMenuText(tv *tview.TextView) {
 
 	fmt.Fprint(tv, fmt.Sprintf(" %d  %d\n ", githubNotifications, gitlabNotifications))
 	fmt.Fprint(tv, "\n  Calendar        c\n\n")
-}
-
-func updateClock(tv *tview.TextView, app *tview.Application) {
-	for true {
-		now := time.Now()
-		date := now.Format("Mon Jan 2 2006")
-
-		str := asciiart.GetTime(now) + "\n\n" + date
-
-		fmt.Fprint(tv, str)
-		app.Draw()
-
-		time.Sleep(1 * time.Second)
-		tv.Clear()
-	}
 }
 
 func getNumGithubNotifications() int {
