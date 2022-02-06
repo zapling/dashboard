@@ -2,7 +2,7 @@ package calendar
 
 import "testing"
 
-func TestGetMonth(t *testing.T) {
+func TestGetMonthDays(t *testing.T) {
 	testCases := []struct {
 		year            int
 		month           int
@@ -23,7 +23,7 @@ func TestGetMonth(t *testing.T) {
 	}
 
 	for index, testCase := range testCases {
-		days := GetMonthView(testCase.year, testCase.month)
+		days := getMonthDays(testCase.year, testCase.month)
 		if len(days) != testCase.expectedResults {
 			t.Errorf("[%d] expected: %d, got: %d", index, testCase.expectedResults, len(days))
 		}
