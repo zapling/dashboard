@@ -1,4 +1,4 @@
-package asciiart
+package clock
 
 var characters = map[rune][]string{
 	'0': {
