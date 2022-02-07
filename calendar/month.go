@@ -40,9 +40,15 @@ import (
 // └──────────┴───────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
 
 type monthView struct {
-	textView *tview.TextView
-	month    time.Time
-	days     []time.Time
+	textView  *tview.TextView
+	month     time.Time
+	days      []time.Time
+	cursorPos cursorPosition
+}
+
+type cursorPosition struct {
+	x int
+	y int
 }
 
 func (m *monthView) NextMonth() {
@@ -54,7 +60,11 @@ func (m *monthView) PrevMonth() {
 }
 
 func (m *monthView) CurrentMonth() {
-	m.changeMonth(time.Now())
+	now := time.Now()
+	m.changeMonth(now)
+	// move cursor after month change, otherwise we won't find the correct day
+	m.cursorPos = m.getCursorPosition(now)
+	m.render()
 }
 
 func (m *monthView) changeMonth(t time.Time) {
@@ -82,6 +92,27 @@ func (m *monthView) getInputHandler(exitCallback func()) func(event *tcell.Event
 
 		}
 
+		// cursor movment
+		if event.Rune() == 'j' {
+			m.moveCursorPos(m.cursorPos.x, m.cursorPos.y+1)
+			return event
+		}
+
+		if event.Rune() == 'k' {
+			m.moveCursorPos(m.cursorPos.x, m.cursorPos.y-1)
+			return event
+		}
+
+		if event.Rune() == 'h' {
+			m.moveCursorPos(m.cursorPos.x-1, m.cursorPos.y)
+			return event
+		}
+
+		if event.Rune() == 'l' {
+			m.moveCursorPos(m.cursorPos.x+1, m.cursorPos.y)
+			return event
+		}
+
 		if event.Key() == tcell.KeyESC {
 			exitCallback()
 			return event
@@ -91,7 +122,60 @@ func (m *monthView) getInputHandler(exitCallback func()) func(event *tcell.Event
 }
 
 func (m *monthView) render() {
+	m.textView.Clear()
 	renderMonthCalendar(m)
+}
+
+func (m *monthView) getCursorPosition(date time.Time) cursorPosition {
+	numWeeks := len(m.days) / 7
+
+	for y := 0; y < numWeeks; y++ {
+		weekDays := m.days[y*7 : 7+(y*7)]
+
+		for x := 0; x < len(weekDays); x++ {
+			if dateEqual(date, weekDays[x]) {
+				return cursorPosition{
+					x: x,
+					y: y,
+				}
+			}
+		}
+	}
+
+	// default on Wednsday week 3 in the view
+	// that should be somewhere in the middle, I think :P
+	return cursorPosition{x: 3, y: 2}
+}
+
+func (m *monthView) moveCursorPos(x, y int) {
+
+	// check if new cursor pos is valid
+	maxY := len(m.days)/7 - 1
+	if y > maxY {
+		m.NextMonth()
+		y = 0
+	}
+
+	if y < 0 {
+		m.PrevMonth()
+		maxY = len(m.days)/7 - 1
+		y = maxY
+	}
+
+	if x < 0 {
+		m.PrevMonth()
+		x = 6
+	}
+
+	if x > 6 {
+		m.NextMonth()
+		x = 0
+	}
+
+	m.cursorPos.x = x
+	m.cursorPos.y = y
+
+	m.render()
 }
 
 func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
@@ -99,14 +183,18 @@ func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
 	textView.SetDynamicColors(true)
 
 	view := &monthView{
-		textView: textView,
-		month:    month,
-		days:     getMonthDays(month),
+		textView:  textView,
+		month:     month,
+		days:      getMonthDays(month),
+		cursorPos: cursorPosition{},
 	}
 
-	textView.SetInputCapture(view.getInputHandler(exitCallback))
+	cursorStartingPos := view.getCursorPosition(time.Now())
 
-	renderMonthCalendar(view)
+	view.cursorPos = cursorStartingPos
+
+	textView.SetInputCapture(view.getInputHandler(exitCallback))
+	view.render()
 
 	return view.textView
 }
@@ -123,11 +211,13 @@ func renderMonthCalendar(m *monthView) {
 	fmt.Fprint(m.textView, header)
 
 	numWeeks := len(m.days) / 7
-	for i := 0; i < numWeeks; i++ {
-		weekDays := m.days[i*7 : 7+(i*7)]
+	for y := 0; y < numWeeks; y++ {
+		weekDays := m.days[y*7 : 7+(y*7)]
 
 		var dateRow string
-		for _, day := range weekDays {
+		for x := 0; x < len(weekDays); x++ {
+			day := weekDays[x]
+
 			color := ":"
 
 			if day.Month() != m.month.Month() {
@@ -142,7 +232,17 @@ func renderMonthCalendar(m *monthView) {
 				color = "darkgreen:green"
 			}
 
-			dateRow = dateRow + appendSpaces(fmt.Sprintf("│ [%s]%2d[-:-:-]", color, day.Day()), 8)
+			dateRow = dateRow + "│"
+
+			// render cursor pos is we are on the correct day
+			if m.cursorPos.y == y && m.cursorPos.x == x {
+				dateRow = dateRow + "[purple]X[-]"
+			} else {
+				dateRow = dateRow + " "
+			}
+
+			dateRow = dateRow + appendSpaces(fmt.Sprintf("[%s]%2d[-:-:-]", color, day.Day()), 8)
+
 		}
 
 		fmt.Fprintf(m.textView, dateRow+"│\n")
@@ -162,7 +262,7 @@ func renderMonthCalendar(m *monthView) {
 		rightCorner := "┤"
 		middle := "┼"
 
-		if i == numWeeks-1 {
+		if y == numWeeks-1 {
 			leftCorner = "└"
 			rightCorner = "┘"
 			middle = "┴"
