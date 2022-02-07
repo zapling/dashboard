@@ -42,7 +42,7 @@ import (
 type monthView struct {
 	textView  *tview.TextView
 	month     time.Time
-	days      []time.Time
+	days      []time.Time // TODO: rename to daysInView
 	cursorPos cursorPosition
 }
 
@@ -234,14 +234,16 @@ func renderMonthCalendar(m *monthView) {
 
 			dateRow = dateRow + "│"
 
+			cursorBox := "-"
 			// render cursor pos is we are on the correct day
 			if m.cursorPos.y == y && m.cursorPos.x == x {
-				dateRow = dateRow + "[purple]X[-]"
-			} else {
-				dateRow = dateRow + " "
+				cursorBox = "grey"
+				if !dateEqual(day, time.Now()) {
+					color = "-:grey"
+				}
 			}
 
-			dateRow = dateRow + appendSpaces(fmt.Sprintf("[%s]%2d[-:-:-]", color, day.Day()), 8)
+			dateRow = dateRow + appendSpaces(fmt.Sprintf("[-:%s] [-:-][%s]%2d[-:-:-][:%s]", cursorBox, color, day.Day(), cursorBox), 8) + "[-:-]"
 
 		}
 
