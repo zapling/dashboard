@@ -1,29 +1,31 @@
 package calendar
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestGetMonthDays(t *testing.T) {
 	testCases := []struct {
-		year            int
-		month           int
+		month           time.Time
 		expectedResults int
 	}{
-		{year: 2022, month: 1, expectedResults: 42},
-		{year: 2022, month: 2, expectedResults: 35},
-		{year: 2022, month: 3, expectedResults: 35},
-		{year: 2022, month: 4, expectedResults: 35},
-		{year: 2022, month: 5, expectedResults: 42},
-		{year: 2022, month: 6, expectedResults: 35},
-		{year: 2022, month: 7, expectedResults: 35},
-		{year: 2022, month: 8, expectedResults: 35},
-		{year: 2022, month: 9, expectedResults: 35},
-		{year: 2022, month: 10, expectedResults: 42},
-		{year: 2022, month: 11, expectedResults: 35},
-		{year: 2022, month: 12, expectedResults: 35},
+		{month: date(2022, 1, 1), expectedResults: 42},
+		{month: date(2022, 2, 1), expectedResults: 35},
+		{month: date(2022, 3, 1), expectedResults: 35},
+		{month: date(2022, 4, 1), expectedResults: 35},
+		{month: date(2022, 5, 1), expectedResults: 42},
+		{month: date(2022, 6, 1), expectedResults: 35},
+		{month: date(2022, 7, 1), expectedResults: 35},
+		{month: date(2022, 8, 1), expectedResults: 35},
+		{month: date(2022, 9, 1), expectedResults: 35},
+		{month: date(2022, 10, 1), expectedResults: 42},
+		{month: date(2022, 11, 1), expectedResults: 35},
+		{month: date(2022, 12, 1), expectedResults: 35},
 	}
 
 	for index, testCase := range testCases {
-		days := getMonthDays(testCase.year, testCase.month)
+		days := getMonthDays(testCase.month)
 		if len(days) != testCase.expectedResults {
 			t.Errorf("[%d] expected: %d, got: %d", index, testCase.expectedResults, len(days))
 		}
