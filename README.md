@@ -1,6 +1,8 @@
 # 🔆 dashboard
 
-![dashboard](./dashboard.png)
+![dashboard](./images/dashboard.png)
+
+![calendar](./images/calendar.png)
 
 # Install
 
@@ -9,8 +11,6 @@ go install github.com/zapling/dashboard@latest
 ```
 
 ## Dependencies
-
-- [weatherapplet](https://github.com/zapling/i3blocks-weather-applet-yrno)
 
 ```shell
 export DASHBOARD_GITHUB_TOKEN=xxx
