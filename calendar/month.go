@@ -2,11 +2,21 @@ package calendar
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
+
+const calendarHeader string = `
+                                  %s %d / %d
+┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
+│  Monday   │  Tuesday  │ Wednsday  │ Thursday  │  Friday   │ [blue]Saturday[-]  │  [red]Sunday[-]   │
+├───────────┼───────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
+`
+
+const weekDivider string = `%[1]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[3]s`
 
 //                                      YYYY / MM
 //
@@ -38,6 +48,27 @@ import (
 // │          │           │           │           │           │           │           │
 // │          │           │           │           │           │           │           │
 // └──────────┴───────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+
+func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
+	textView := tview.NewTextView()
+	textView.SetDynamicColors(true)
+
+	view := &monthView{
+		textView:  textView,
+		month:     month,
+		days:      getMonthDays(month),
+		cursorPos: cursorPosition{},
+	}
+
+	cursorStartingPos := view.getCursorPosition(time.Now())
+
+	view.cursorPos = cursorStartingPos
+
+	textView.SetInputCapture(view.getInputHandler(exitCallback))
+	view.render()
+
+	return view.textView
+}
 
 type monthView struct {
 	textView  *tview.TextView
@@ -121,11 +152,6 @@ func (m *monthView) getInputHandler(exitCallback func()) func(event *tcell.Event
 	}
 }
 
-func (m *monthView) render() {
-	m.textView.Clear()
-	renderMonthCalendar(m)
-}
-
 func (m *monthView) getCursorPosition(date time.Time) cursorPosition {
 	numWeeks := len(m.days) / 7
 
@@ -178,105 +204,118 @@ func (m *monthView) moveCursorPos(x, y int) {
 	m.render()
 }
 
-func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
-	textView := tview.NewTextView()
-	textView.SetDynamicColors(true)
-
-	view := &monthView{
-		textView:  textView,
-		month:     month,
-		days:      getMonthDays(month),
-		cursorPos: cursorPosition{},
-	}
-
-	cursorStartingPos := view.getCursorPosition(time.Now())
-
-	view.cursorPos = cursorStartingPos
-
-	textView.SetInputCapture(view.getInputHandler(exitCallback))
-	view.render()
-
-	return view.textView
-}
-
-func renderMonthCalendar(m *monthView) {
-	header := fmt.Sprintf(`
-                                  %s %d / %d
-┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
-│  Monday   │  Tuesday  │ Wednsday  │ Thursday  │  Friday   │ [blue]Saturday[-]  │  [red]Sunday[-]   │
-├───────────┼───────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
-`, m.month.Month().String(), m.month.Year(), m.month.Month())
-
-	// render header
-	fmt.Fprint(m.textView, header)
+func (m *monthView) render() {
+	m.textView.Clear()
 
 	numWeeks := len(m.days) / 7
-	for y := 0; y < numWeeks; y++ {
-		weekDays := m.days[y*7 : 7+(y*7)]
 
-		var dateRow string
-		for x := 0; x < len(weekDays); x++ {
-			day := weekDays[x]
+	calendarRows := m.getCalendarRows()
 
-			color := ":"
+	// header
+	fmt.Fprint(
+		m.textView,
+		fmt.Sprintf(calendarHeader, m.month.Month().String(), m.month.Year(), m.month.Month()),
+	)
 
-			if day.Month() != m.month.Month() {
-				color = "grey"
-			} else if day.Weekday() == time.Saturday {
-				color = "blue"
-			} else if day.Weekday() == time.Sunday {
-				color = "red"
-			}
-
-			if dateEqual(day, time.Now()) {
-				color = "darkgreen:green"
-			}
-
-			dateRow = dateRow + "│"
-
-			cursorBox := "-"
-			// render cursor pos is we are on the correct day
-			if m.cursorPos.y == y && m.cursorPos.x == x {
-				cursorBox = "grey"
-				if !dateEqual(day, time.Now()) {
-					color = "-:grey"
-				}
-			}
-
-			dateRow = dateRow + appendSpaces(fmt.Sprintf("[-:%s] [-:-][%s]%2d[-:-:-][:%s]", cursorBox, color, day.Day(), cursorBox), 8) + "[-:-]"
-
-		}
-
-		fmt.Fprintf(m.textView, dateRow+"│\n")
-
-		// render 3 empty rows for now
-		emptyRow := appendSpaces("│", 11)
-		for i := 0; i < 3; i++ {
-			for y := 0; y < 7; y++ {
-				fmt.Fprint(m.textView, emptyRow)
-			}
-			fmt.Fprint(m.textView, "│\n")
-		}
-
-		// render closing line
-
+	// render weeks divider
+	for weekIndex, weekStr := range calendarRows {
 		leftCorner := "├"
 		rightCorner := "┤"
 		middle := "┼"
 
-		if y == numWeeks-1 {
+		if weekIndex == numWeeks-1 {
 			leftCorner = "└"
 			rightCorner = "┘"
 			middle = "┴"
 		}
 
-		closingLine := fmt.Sprintf(
-			`%[1]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[2]s───────────%[3]s`,
-			leftCorner, middle, rightCorner,
-		)
+		divider := fmt.Sprintf(weekDivider, leftCorner, middle, rightCorner)
 
-		fmt.Fprint(m.textView, closingLine+"\n")
+		fmt.Fprint(m.textView, weekStr+"\n")
+		fmt.Fprint(m.textView, divider+"\n")
 	}
+}
+
+func (m *monthView) getCalendarRows() []string {
+	numWeeks := len(m.days) / 7
+
+	var calendarRows []string
+	for y := 0; y < numWeeks; y++ {
+		days := m.days[y*7 : 7+(y*7)]
+
+		var weekStr []string
+		for x := 0; x < len(days); x++ {
+			day := days[x]
+
+			dayStr := m.getCalendarDay(day, x, y)
+
+			weekStr = append(weekStr, strings.Join(dayStr, "\n"))
+		}
+
+		tmp := []string{"", "", "", ""}
+		for dayId, dayStr := range weekStr {
+			for rowId, rowStr := range strings.Split(dayStr, "\n") {
+				tmp[rowId] = tmp[rowId] + rowStr
+			}
+
+			// append border as the last character on each row if we are on a sunday
+			if dayId == 6 {
+				for idx := range tmp {
+					tmp[idx] = tmp[idx] + "│"
+				}
+			}
+
+		}
+
+		calendarRows = append(calendarRows, strings.Join(tmp, "\n"))
+	}
+
+	return calendarRows
+}
+
+func (m *monthView) getCalendarDay(day time.Time, x, y int) []string {
+	cursor := ":"
+
+	dayNumberColor := m.getDayNumberColor(day)
+
+	if m.cursorPos.y == y && m.cursorPos.x == x {
+		cursor = "-:grey"
+		if !dateEqual(day, time.Now()) {
+			dayNumberColor = "-:grey"
+			if (day.Weekday() == time.Saturday || day.Weekday() == time.Sunday) && day.Month() == m.month.Month() {
+				color := m.getDayNumberColor(day)
+				dayNumberColor = strings.ReplaceAll(dayNumberColor, "-", color)
+			}
+		}
+	}
+
+	dayStr := fmt.Sprintf(
+		"│[%s] [%s]%2d[-:-][%s]        [-:-]\n"+
+			"│[%s]           [-:-]\n"+
+			"│[%s]           [-:-]\n"+
+			"│[%s]           [-:-]",
+		cursor, dayNumberColor, day.Day(), cursor, cursor, cursor, cursor,
+	)
+
+	return strings.Split(dayStr, "\n")
+}
+
+func (m *monthView) getDayNumberColor(day time.Time) string {
+	color := ":"
+
+	if day.Month() != m.month.Month() {
+		color = "grey"
+	} else if day.Weekday() == time.Saturday {
+		color = "blue"
+	} else if day.Weekday() == time.Sunday {
+		color = "red"
+	}
+
+	if dateEqual(day, time.Now()) {
+		color = "darkgreen:green"
+	}
+
+	return color
 }
 
 func getMonthDays(month time.Time) []time.Time {
