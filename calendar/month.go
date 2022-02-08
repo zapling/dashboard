@@ -296,12 +296,47 @@ func (m *monthView) getCalendarDay(day time.Time, x, y int) []string {
 		}
 	}
 
+	// TODO: figure out how to render event over multiple days
+
+	// need to figure out how to keep event row length at all cost
+	var holidayRow string = "       "
+	var eventRow1 string = "           "
+	var eventRow2 string = "           "
+	var eventRow3 string = "           "
+
+	// dummy events to test
+	if day.Day() == 24 && int(day.Month()) == 12 {
+		holidayRow = "Christ."
+	}
+
+	if day.Day() == 14 && int(day.Month()) == 2 {
+		holidayRow = "Valent."
+	}
+
+	if day.Day() == 8 && int(day.Month()) == 2 {
+		eventRow1 = "[black:orange] Researc..[-:-]"
+		eventRow2 = "[white:blue]Conference [-:-]"
+		eventRow3 = "[black:green]BBQ at Joes[-]"
+	}
+
+	if day.Day() == 13 && int(day.Month()) == 2 {
+		eventRow1 = "[blue::b] Jacob fö.[-:-:-]"
+	}
+
+	holidayRow = "[white::b]" + holidayRow + "[-:-:-]"
+
 	dayStr := fmt.Sprintf(
-		"│[%s] [%s]%2d[-:-][%s]        [-:-]\n"+
-			"│[%s]           [-:-]\n"+
-			"│[%s]           [-:-]\n"+
-			"│[%s]           [-:-]",
-		cursor, dayNumberColor, day.Day(), cursor, cursor, cursor, cursor,
+		"│[%[1]s] [%[2]s]%2[3]d[-:-][%[1]s] %[4]s[-:-]\n"+
+			"│[%[1]s]%[5]s[-:-]\n"+
+			"│[%[1]s]%[6]s[-:-]\n"+
+			"│[%[1]s]%[7]s[-:-]",
+		cursor,
+		dayNumberColor,
+		day.Day(),
+		holidayRow,
+		eventRow1,
+		eventRow2,
+		eventRow3,
 	)
 
 	return strings.Split(dayStr, "\n")
@@ -319,7 +354,7 @@ func (m *monthView) getDayNumberColor(day time.Time) string {
 	}
 
 	if dateEqual(day, time.Now()) {
-		color = "darkgreen:green"
+		color = "black:green"
 	}
 
 	return color
