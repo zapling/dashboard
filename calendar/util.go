@@ -19,3 +19,12 @@ func appendSpaces(str string, amount int) string {
 
 	return str
 }
+
+func ensureLength(str string, length int) string {
+	spacesToAppend := length - len(str)
+	if spacesToAppend > 0 {
+		return appendSpaces(str, spacesToAppend)
+	}
+
+	return str
+}
