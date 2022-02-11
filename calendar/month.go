@@ -223,16 +223,22 @@ func (m *monthView) render() {
 		rightCorner := "┤"
 		middle := "┼"
 
+		lastWeek := false
 		if weekIndex == numWeeks-1 {
 			leftCorner = "└"
 			rightCorner = "┘"
 			middle = "┴"
+			lastWeek = true
 		}
 
 		divider := fmt.Sprintf(weekDivider, leftCorner, middle, rightCorner)
 
 		fmt.Fprint(m.textView, weekStr+"\n")
-		fmt.Fprint(m.textView, divider+"\n")
+		fmt.Fprint(m.textView, divider)
+
+		if !lastWeek {
+			fmt.Fprint(m.textView, "\n")
+		}
 	}
 }
 
