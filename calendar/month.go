@@ -10,7 +10,7 @@ import (
 )
 
 const calendarHeader string = `
-                                  %s %d / %d
+%s %d / %d
 ┌───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
 │  Monday   │  Tuesday  │ Wednsday  │ Thursday  │  Friday   │ [blue]Saturday[-]  │  [red]Sunday[-]   │
 ├───────────┼───────────┼───────────┼───────────┼───────────┼───────────┼───────────┤
@@ -52,6 +52,7 @@ const weekDivider string = `%[1]s───────────%[2]s───
 func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
 	textView := tview.NewTextView()
 	textView.SetDynamicColors(true)
+	textView.SetTextAlign(tview.AlignCenter)
 
 	view := &monthView{
 		textView:  textView,
