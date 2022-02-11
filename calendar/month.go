@@ -254,7 +254,7 @@ func (m *monthView) getCalendarRows() []string {
 		for x := 0; x < len(days); x++ {
 			day := days[x]
 
-			events := m.getCalendarDayEvents(day)
+			events := GetEventsByDate(day)
 
 			dayStr := m.getCalendarDay(day, x, y, events)
 
@@ -282,55 +282,7 @@ func (m *monthView) getCalendarRows() []string {
 	return calendarRows
 }
 
-// TODO: refine and move to another file? event.go?
-type calendarEvent struct {
-	startTime time.Time
-	stopTime  time.Time
-	text      string
-	color     string
-}
-
-func (m *monthView) getCalendarDayEvents(day time.Time) []calendarEvent {
-	var events []calendarEvent
-
-	// if day.Day() == 24 && int(day.Month()) == 12 {
-	// 	holidayRow = "Christ."
-	// 	events = append(events, calendarEvent{
-	// 		startTime: date(2021, 12, 24),
-	// 		startTime: date(2021, 12, 25),
-	// 	})
-	// }
-
-	// if day.Day() == 14 && int(day.Month()) == 2 {
-	// 	holidayRow = "Valent."
-	// }
-
-	if (day.Day() == 8 || day.Day() == 9) && int(day.Month()) == 2 {
-		events = append(events, calendarEvent{
-			startTime: date(2022, 2, 8),
-			stopTime:  date(2022, 2, 9),
-			text:      "  Research day",
-			color:     "black:orange",
-		})
-		// eventRow1 = "[black:orange] Researc..[-:-]"
-		// eventRow2 = "[white:blue]Conference [-:-]"
-		// eventRow3 = "[black:green]BBQ at Joes[-]"
-	}
-
-	if day.Day() == 13 && int(day.Month()) == 2 {
-		// eventRow1 = "[blue::b] Jacob fö.[-:-:-]"
-		events = append(events, calendarEvent{
-			startTime: date(2022, 2, 13),
-			stopTime:  date(2022, 2, 13),
-			text:      " Jacob födelsedag",
-			color:     "blue::b",
-		})
-	}
-
-	return events
-}
-
-func (m *monthView) getCalendarDay(day time.Time, x, y int, events []calendarEvent) []string {
+func (m *monthView) getCalendarDay(day time.Time, x, y int, events []event) []string {
 	cursor := ":"
 
 	dayNumberColor := m.getDayNumberColor(day)
