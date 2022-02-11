@@ -23,12 +23,18 @@ func NewLandingPage(state *state.UIState) tview.Primitive {
 
 	menuTextView := tview.NewTextView()
 	menuTextView.SetTextAlign(tview.AlignCenter)
+	menuTextView.SetDynamicColors(true)
 	printMenuText(menuTextView)
 
 	menuTextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'c' {
 			state.Pages.HidePage(PAGE_LANDING)
 			state.Pages.SwitchToPage(PAGE_CALENDAR)
+			return event
+		}
+
+		if event.Rune() == 't' {
+			state.Pages.ShowPage("task_view")
 			return event
 		}
 
@@ -49,11 +55,12 @@ func NewLandingPage(state *state.UIState) tview.Primitive {
 }
 
 func printMenuText(tv *tview.TextView) {
-	githubNotifications := getNumGithubNotifications()
-	gitlabNotifications := getNumGitlabNotifications()
+	// githubNotifications := getNumGithubNotifications()
+	// gitlabNotifications := getNumGitlabNotifications()
 
-	fmt.Fprint(tv, fmt.Sprintf(" %d  %d\n ", githubNotifications, gitlabNotifications))
-	fmt.Fprint(tv, "\n  Calendar        c\n\n")
+	// fmt.Fprint(tv, fmt.Sprintf(" %d  %d\n ", githubNotifications, gitlabNotifications))
+	fmt.Fprint(tv, "\n  Tasks           [aqua::b]t[-:-:-]")
+	fmt.Fprint(tv, "\n  Calendar        [aqua::b]c[-:-:-]")
 }
 
 func getNumGithubNotifications() int {
