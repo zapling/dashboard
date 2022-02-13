@@ -3,10 +3,26 @@ package calendar
 import "time"
 
 type event struct {
+	id        string
 	text      string
 	color     string
 	startTime time.Time
 	stopTime  time.Time
+}
+
+func GetEventsByDates(dates []time.Time) map[time.Time][]event {
+	dateEventsMap := make(map[time.Time][]event)
+
+	for _, date := range dates {
+		events := GetEventsByDate(date)
+		if events == nil {
+			continue
+		}
+
+		dateEventsMap[date] = events
+	}
+
+	return dateEventsMap
 }
 
 func GetEventsByDate(d time.Time) []event {

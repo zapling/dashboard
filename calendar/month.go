@@ -54,16 +54,18 @@ func NewMonthView(month time.Time, exitCallback func()) *tview.TextView {
 	textView.SetDynamicColors(true)
 	textView.SetTextAlign(tview.AlignCenter)
 
+	dates := getMonthDays(month)
+	events := GetEventsByDates(dates)
+
 	view := &monthView{
 		textView:  textView,
 		month:     month,
-		days:      getMonthDays(month),
+		days:      dates,
+		events:    events,
 		cursorPos: cursorPosition{},
 	}
 
-	cursorStartingPos := view.getCursorPosition(time.Now())
-
-	view.cursorPos = cursorStartingPos
+	view.cursorPos = view.getCursorPosition(time.Now())
 
 	textView.SetInputCapture(view.getInputHandler(exitCallback))
 	view.render()
@@ -75,6 +77,7 @@ type monthView struct {
 	textView  *tview.TextView
 	month     time.Time
 	days      []time.Time // TODO: rename to daysInView
+	events    map[time.Time][]event
 	cursorPos cursorPosition
 }
 
@@ -210,7 +213,8 @@ func (m *monthView) render() {
 
 	numWeeks := len(m.days) / 7
 
-	calendarRows := m.getCalendarRows()
+	// calendarRows := m.getCalendarRows()
+	calendarRows := m.getCalendarRows2()
 
 	// header
 	fmt.Fprint(
@@ -243,6 +247,179 @@ func (m *monthView) render() {
 	}
 }
 
+type calendarDay struct {
+	date    time.Time
+	holiday string
+	events  []event // max 3 items?
+}
+
+func (m *monthView) getCalendarRows2() []string {
+	numWeeks := len(m.days) / 7
+
+	yxMapping := make([][]calendarDay, numWeeks)
+	for i := range yxMapping {
+		yxMapping[i] = make([]calendarDay, 7)
+	}
+
+	for y := 0; y < numWeeks; y++ {
+		weekDays := m.days[y*7 : 7+(y*7)]
+
+		for x := 0; x < len(weekDays); x++ {
+			yxMapping[y][x] = m.getCalendarDay2(weekDays[x])
+		}
+	}
+
+	getPreviousDay := func(currentY, currentX int, currentDate time.Time) calendarDay {
+		// we need to lookup the last day of the previous month
+		if currentX == 0 && currentY == 0 {
+			prevDate := time.Date(currentDate.Year(), currentDate.Month(), -1, 0, 0, 0, 0, time.UTC)
+			return m.getCalendarDay2(prevDate)
+		}
+
+		var newY int
+		var newX int
+		if currentX == 0 {
+			newY = currentY - 1
+			newX = 6
+			return yxMapping[newY][newX]
+		}
+
+		return yxMapping[currentY][currentX-1]
+	}
+
+	// getNextDay := func(currentX, currentY, numWeeks int, currentDate time.Time) calendarDay {
+	// 	if currentX == 6 && currentY == numWeeks {
+	// 		nextDate := time.Date(currentDate.Year(), time.Month(int(currentDate.Month())+1), 1, 0, 0, 0, 0, time.UTC)
+	// 		return m.getCalendarDay2(nextDate)
+	// 	}
+
+	// 	if currentX == 6 {
+	// 		return yxMapping[currentY+1][0]
+	// 	}
+
+	// 	return yxMapping[currentY][currentX+1]
+	// }
+
+	var calendarRows []string
+	for y, weekDays := range yxMapping {
+		var weekStr []string
+		for x, currentDay := range weekDays {
+			prevDay := getPreviousDay(y, x, currentDay.date)
+			// nextDay := getNextDay(y, x, numWeeks, currentDay.date)
+
+			dayColor := m.getDayNumberColor(currentDay.date)
+			cursor := ":"
+			if m.cursorPos.y == y && m.cursorPos.x == x {
+				cursor = "-:grey"
+				if !dateEqual(currentDay.date, time.Now()) {
+					dayColor = "-:grey"
+					if (currentDay.date.Weekday() == time.Saturday || currentDay.date.Weekday() == time.Sunday) && currentDay.date.Month() == m.month.Month() {
+						color := m.getDayNumberColor(currentDay.date)
+						dayColor = strings.ReplaceAll(dayColor, "-", color)
+					}
+				}
+			}
+
+			dayStr := fmt.Sprintf(
+				"│[%[1]s] [%[2]s]%2[3]d[-:-][%[1]s] %[4]s[-:-]\n",
+				cursor,
+				dayColor,
+				currentDay.date.Day(),
+				ensureLength("", 7),
+			)
+
+			type eventRow struct {
+				startBorder bool
+				text        string
+				color       string
+			}
+
+			var eventRows = []eventRow{
+				{startBorder: true, text: ensureLength("", 11)},
+				{startBorder: true, text: ensureLength("", 11)},
+				{startBorder: true, text: ensureLength("", 11)},
+			}
+
+			hasSameEvent := func(text string, events []event) bool {
+				for _, e := range events {
+					if e.text == text {
+						return true
+					}
+				}
+
+				return false
+			}
+
+			for i, event := range currentDay.events {
+				var eRow eventRow
+				eRow.startBorder = true
+
+				text := event.text
+				if hasSameEvent(event.text, prevDay.events) {
+					eRow.startBorder = false
+					if len(text)-11 > 0 {
+						runes := []rune(text)
+						text = string(runes[11:])
+					}
+
+				}
+
+				eRow.text = fmt.Sprintf("[%s]%s", event.color, ensureLength(text, 11))
+				eRow.color = event.color
+
+				eventRows[i] = eRow
+			}
+
+			for _, eRow := range eventRows {
+				text := eRow.text
+
+				border := "│"
+				if eRow.startBorder == false {
+					border = ""
+					text = text + " "
+				}
+
+				str := fmt.Sprintf("%s[%s]%s[-:-:-]\n", border, cursor, text)
+
+				dayStr = dayStr + str
+			}
+
+			dayStr = dayStr[:len(dayStr)-1] // remove last \n
+
+			weekStr = append(weekStr, dayStr)
+
+		}
+
+		tmp := []string{"", "", "", ""} // each week has 4 rows
+		for dayId, dayStr := range weekStr {
+			for rowId, rowStr := range strings.Split(dayStr, "\n") {
+				tmp[rowId] = tmp[rowId] + rowStr
+			}
+
+			// append border as the last character on each row if we are on a sunday
+			if dayId == 6 {
+				for idx := range tmp {
+					tmp[idx] = tmp[idx] + "│"
+				}
+			}
+
+		}
+
+		calendarRows = append(calendarRows, strings.Join(tmp, "\n"))
+	}
+
+	return calendarRows
+}
+
+func (m *monthView) getCalendarDay2(date time.Time) calendarDay {
+	return calendarDay{
+		date:    date,
+		holiday: "",
+		events:  m.events[date], // TODO: need to handle case if we are trying to get a date
+		// we don't have loaded events for!
+	}
+}
+
 func (m *monthView) getCalendarRows() []string {
 	numWeeks := len(m.days) / 7
 
@@ -254,8 +431,8 @@ func (m *monthView) getCalendarRows() []string {
 		for x := 0; x < len(days); x++ {
 			day := days[x]
 
-			events := GetEventsByDate(day)
-
+			var events []event
+			events = m.events[day]
 			dayStr := m.getCalendarDay(day, x, y, events)
 
 			weekStr = append(weekStr, strings.Join(dayStr, "\n"))

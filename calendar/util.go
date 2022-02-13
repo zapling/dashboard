@@ -1,6 +1,8 @@
 package calendar
 
-import "time"
+import (
+	"time"
+)
 
 func date(year, month, day int) time.Time {
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
@@ -26,5 +28,7 @@ func ensureLength(str string, length int) string {
 		return appendSpaces(str, spacesToAppend)
 	}
 
-	return str
+	// unicode hack
+	runes := []rune(str)
+	return string(runes[:length])
 }
